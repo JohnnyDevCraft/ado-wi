@@ -38,6 +38,7 @@
 - Packaging work should include formula creation, artifact hash generation, and install verification.
 - Public Homebrew installs must use a GitHub release asset URL rather than a machine-local `file://` path.
 - Version `0.1.1` fixes missing related work item expansion for parent and child items.
+- Version `0.1.2` expands description-field capture and converts HTML description content to Markdown before export.
 - The application’s core output is a markdown document containing:
   - the selected work item
   - parent work items
@@ -100,6 +101,9 @@
   - loading secondary work items by global Azure DevOps work item ID instead of forcing the configured default project path
   - fetching comments from each retrieved item's actual project
   - including formal Azure DevOps `Related` links from the root, parents, and children in the related work item section
+- Expanded description-field handling by:
+  - capturing a broader set of long-text and rich-text description-style fields
+  - converting HTML description content to Markdown before it reaches the export builder
 
 ## Next Recommended Step
-- Publish and verify the `0.1.1` release and tap update.
+- Validate the broader description-field capture against live Azure DevOps work items and decide when to publish the `0.1.2` release.

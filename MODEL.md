@@ -108,7 +108,8 @@ create table markdown_export (
 
 ### `work_item_snapshot`
 - Stores normalized metadata plus the raw Azure DevOps payload for traceability.
-- `description_fields_json` preserves multiple description-style fields, such as description, acceptance criteria, and reproduction steps, without flattening them into a single field.
+- `description_fields_json` preserves multiple description-style fields, such as description, acceptance criteria, reproduction steps, and other long-text/rich-text fields, without flattening them into a single field.
+- Description field values are expected to be normalized into Markdown-friendly text before export generation.
 
 ### `work_item_relation`
 - Stores the parent/child graph captured for a retrieval run.

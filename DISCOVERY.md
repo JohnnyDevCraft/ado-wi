@@ -127,6 +127,7 @@ Work item data in Azure DevOps is often not in a form that is immediately useful
 - The current implementation uses `Spectre.Console` for the menu/help/status experience.
 - The current Homebrew formula should be generated from a GitHub release asset URL for cross-machine installs.
 - A `0.1.1` bugfix release is required to ensure related work items discovered from parent and child records are included reliably.
+- A `0.1.2` follow-up release is needed to ensure description-style fields are captured broadly and HTML content is converted to Markdown before export.
 
 ## Change Log
 - 2026-03-30: Initial discovery document created from user request and existing repository scaffold.
@@ -139,3 +140,4 @@ Work item data in Azure DevOps is often not in a form that is immediately useful
 - 2026-03-30: Added feature `006` for Homebrew packaging and installation, including formula creation, version `0.1.0`, hash generation, and install verification.
 - 2026-03-30: Implemented the baseline application, local Homebrew packaging scripts, and verified a local Homebrew install for version `0.1.0`.
 - 2026-03-30: Fixed related work item retrieval for parent and child items and prepared the `0.1.1` release.
+- 2026-03-30: Expanded description-field capture and converted HTML description content to Markdown, then moved the app version to `0.1.2`.

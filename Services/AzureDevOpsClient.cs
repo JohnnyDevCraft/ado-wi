@@ -8,6 +8,23 @@ namespace WorkItems.Services;
 
 public sealed class AzureDevOpsClient
 {
+    private static readonly HashSet<string> ExcludedDescriptionFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System.Title",
+        "System.State",
+        "System.Tags",
+        "System.AreaPath",
+        "System.IterationPath",
+        "System.WorkItemType",
+        "System.AssignedTo",
+        "System.TeamProject",
+        "System.ProjectId",
+        "System.CreatedBy",
+        "System.ChangedBy",
+        "System.Reason",
+        "System.History"
+    };
+
     private static readonly string[] DescriptionFieldPriority =
     [
         "System.Description",
@@ -15,7 +32,11 @@ public sealed class AzureDevOpsClient
         "Microsoft.VSTS.TCM.ReproSteps",
         "Custom.Description",
         "Custom.AcceptanceCriteria",
-        "Custom.ReproSteps"
+        "Custom.ReproSteps",
+        "Custom.ProblemStatement",
+        "Custom.StepsToReproduce",
+        "Custom.Background",
+        "Custom.Notes"
     ];
 
     public async Task<IReadOnlyList<AdoProject>> ListProjectsAsync(
@@ -183,13 +204,13 @@ public sealed class AzureDevOpsClient
 
         foreach (var priorityField in DescriptionFieldPriority)
         {
-            if (TryGetStringField(fields, priorityField, out var value) && !string.IsNullOrWhiteSpace(value))
+            if (TryGetStringField(fields, priorityField, out var value) && ShouldCaptureDescriptionField(priorityField, value))
             {
                 descriptions.Add(new DescriptionField
                 {
                     ReferenceName = priorityField,
                     DisplayName = DisplayNameForField(priorityField),
-                    Value = value.Trim()
+                    Value = HtmlMarkdownConverter.ConvertDescriptionField(value!)
                 });
                 seen.Add(priorityField);
             }
@@ -202,18 +223,13 @@ public sealed class AzureDevOpsClient
                 continue;
             }
 
-            if (!LooksLikeDescriptionField(property.Name))
-            {
-                continue;
-            }
-
             if (property.Value.ValueKind != JsonValueKind.String)
             {
                 continue;
             }
 
             var value = property.Value.GetString();
-            if (string.IsNullOrWhiteSpace(value))
+            if (!ShouldCaptureDescriptionField(property.Name, value))
             {
                 continue;
             }
@@ -222,11 +238,29 @@ public sealed class AzureDevOpsClient
             {
                 ReferenceName = property.Name,
                 DisplayName = DisplayNameForField(property.Name),
-                Value = value.Trim()
+                Value = HtmlMarkdownConverter.ConvertDescriptionField(value!)
             });
         }
 
         return descriptions;
+    }
+
+    private static bool ShouldCaptureDescriptionField(string fieldName, string? value)
+    {
+        if (ExcludedDescriptionFields.Contains(fieldName))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return LooksLikeDescriptionField(fieldName)
+            || HtmlMarkdownConverter.LooksLikeHtml(value)
+            || value.Contains('\n')
+            || value.Length >= 120;
     }
 
     private static bool LooksLikeDescriptionField(string fieldName)
@@ -235,6 +269,10 @@ public sealed class AzureDevOpsClient
             || fieldName.Contains("acceptancecriteria", StringComparison.OrdinalIgnoreCase)
             || fieldName.Contains("reprosteps", StringComparison.OrdinalIgnoreCase)
             || fieldName.Contains("problem", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("background", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("summary", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("notes", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("details", StringComparison.OrdinalIgnoreCase)
             || fieldName.Contains("steps", StringComparison.OrdinalIgnoreCase)
             || fieldName.Contains("criteria", StringComparison.OrdinalIgnoreCase);
     }

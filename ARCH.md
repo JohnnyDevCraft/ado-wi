@@ -105,6 +105,8 @@ The final executable name is `ado-wi`.
 ## Retrieval Requirements
 - Each retrieved work item should normalize the same core field set.
 - Description content may come from multiple Azure DevOps long-text fields and should be preserved as distinct description-style fields.
+- Description-style field extraction should prefer capturing all available rich-text and long-text description fields rather than only a narrow allowlist.
+- HTML description field content should be converted to Markdown before markdown export generation begins.
 - Parent, child, and text-referenced related items should all carry the same normalized shape into markdown generation.
 - Secondary work item loads should use each work item's actual project metadata rather than assuming the configured default project for all follow-up requests.
 - The related work item section should include both one-layer text references and formal Azure DevOps `Related` relations discovered on the root, parent, and child items.
@@ -126,8 +128,10 @@ The final executable name is `ado-wi`.
   - [`/Users/john/Source/repos/xelseor/homebrew-ado-wi`](/Users/john/Source/repos/xelseor/homebrew-ado-wi)
 - Planned formula location:
   - [`/Users/john/Source/repos/xelseor/homebrew-ado-wi/Formula/ado-wi.rb`](/Users/john/Source/repos/xelseor/homebrew-ado-wi/Formula/ado-wi.rb)
-- Current release line:
+- Latest published release line:
   - `0.1.1`
+- Current app version target:
+  - `0.1.2`
 - Packaging work should include:
   - release artifact generation
   - SHA-256 hash generation for the artifact
