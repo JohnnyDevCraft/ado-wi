@@ -15,7 +15,8 @@
   - section headings
 
 ## Console UI Principles
-- Start with a readable ASCII splash screen.
+- Start with a readable ASCII STARC splash screen.
+- Render the splash at the top of every application run, including interactive mode, direct config commands, direct retrieval commands, and error output paths.
 - Default to plain-text-safe rendering for any Azure DevOps content.
 - Use borders, panels, tables, and rules where they improve scanning.
 - Keep menus short and task-oriented.
@@ -33,6 +34,7 @@
 - Startup splash
 - Main menu
 - Configuration screens
+- Direct command result screen/state beneath the splash
 - Work item lookup form
 - Retrieval progress/status display
 - Work item summary view
@@ -48,6 +50,7 @@
 - No custom theme assets exist yet.
 - No `theme/` folder has been added yet.
 
-## Pending Design Decisions
-- Confirm whether the menu system library is actually `Subtray` or if Spectre.Console remains the chosen UI layer.
-- Define the final splash screen text and brand treatment during implementation.
+## Implemented Theme Notes
+- The console UI is implemented with `Spectre.Console`.
+- The splash is a boxed ASCII STARC banner rendered at the top of every execution path.
+- Tables are used for help output and selection prompts drive menu/configuration flows.

@@ -1,0 +1,392 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using WorkItems.Models;
+
+namespace WorkItems.Services;
+
+public sealed class AzureDevOpsClient
+{
+    private static readonly string[] DescriptionFieldPriority =
+    [
+        "System.Description",
+        "Microsoft.VSTS.Common.AcceptanceCriteria",
+        "Microsoft.VSTS.TCM.ReproSteps",
+        "Custom.Description",
+        "Custom.AcceptanceCriteria",
+        "Custom.ReproSteps"
+    ];
+
+    public async Task<IReadOnlyList<AdoProject>> ListProjectsAsync(
+        string baseUrl,
+        string organization,
+        string pat,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient(baseUrl, pat);
+        var url = $"{TrimEnd(baseUrl)}/{Uri.EscapeDataString(organization)}/_apis/projects?api-version=7.1";
+        using var response = await client.GetAsync(url, cancellationToken);
+        await EnsureSuccessAsync(response, "Unable to list Azure DevOps projects.");
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var projects = new List<AdoProject>();
+
+        if (!document.RootElement.TryGetProperty("value", out var valueElement) || valueElement.ValueKind != JsonValueKind.Array)
+        {
+            return projects;
+        }
+
+        foreach (var projectElement in valueElement.EnumerateArray())
+        {
+            projects.Add(new AdoProject
+            {
+                Id = projectElement.GetProperty("id").GetString() ?? string.Empty,
+                Name = projectElement.GetProperty("name").GetString() ?? string.Empty,
+                Description = projectElement.TryGetProperty("description", out var description) ? description.GetString() : null,
+                Url = projectElement.TryGetProperty("url", out var urlElement) ? urlElement.GetString() : null
+            });
+        }
+
+        return projects;
+    }
+
+    public async Task<NormalizedWorkItem> GetWorkItemAsync(
+        string baseUrl,
+        string organization,
+        string projectName,
+        string projectId,
+        string pat,
+        int workItemId,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient(baseUrl, pat);
+        var url =
+            $"{TrimEnd(baseUrl)}/{Uri.EscapeDataString(organization)}/{Uri.EscapeDataString(projectName)}/_apis/wit/workitems/{workItemId}?$expand=relations&api-version=7.1";
+        using var response = await client.GetAsync(url, cancellationToken);
+        await EnsureSuccessAsync(response, $"Unable to load work item {workItemId}.");
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        return ParseWorkItem(document.RootElement, organization, projectName, projectId);
+    }
+
+    public async Task<IReadOnlyList<WorkItemComment>> GetCommentsAsync(
+        string baseUrl,
+        string organization,
+        string projectName,
+        string pat,
+        int workItemId,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient(baseUrl, pat);
+        var url =
+            $"{TrimEnd(baseUrl)}/{Uri.EscapeDataString(organization)}/{Uri.EscapeDataString(projectName)}/_apis/wit/workItems/{workItemId}/comments?api-version=7.1-preview.4";
+        using var response = await client.GetAsync(url, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return [];
+        }
+
+        await EnsureSuccessAsync(response, $"Unable to load comments for work item {workItemId}.");
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var comments = new List<WorkItemComment>();
+
+        if (!document.RootElement.TryGetProperty("comments", out var commentsElement) ||
+            commentsElement.ValueKind != JsonValueKind.Array)
+        {
+            return comments;
+        }
+
+        foreach (var commentElement in commentsElement.EnumerateArray())
+        {
+            comments.Add(new WorkItemComment
+            {
+                CommentId = commentElement.TryGetProperty("id", out var idElement) ? idElement.ToString() : string.Empty,
+                AuthoredBy = TryReadIdentity(commentElement, "createdBy"),
+                AuthoredAt = commentElement.TryGetProperty("createdDate", out var createdDate)
+                    && createdDate.ValueKind == JsonValueKind.String
+                    && DateTimeOffset.TryParse(createdDate.GetString(), out var parsedDate)
+                        ? parsedDate
+                        : null,
+                RenderedText = ExtractCommentText(commentElement)
+            });
+        }
+
+        return comments;
+    }
+
+    private static HttpClient CreateClient(string baseUrl, string pat)
+    {
+        var client = new HttpClient
+        {
+            BaseAddress = new Uri(TrimEnd(baseUrl))
+        };
+
+        var token = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", token);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        return client;
+    }
+
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response, string message)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var body = await response.Content.ReadAsStringAsync();
+        throw new InvalidOperationException($"{message} HTTP {(int)response.StatusCode}: {body}");
+    }
+
+    private static string TrimEnd(string baseUrl)
+    {
+        return baseUrl.TrimEnd('/');
+    }
+
+    private static NormalizedWorkItem ParseWorkItem(
+        JsonElement root,
+        string organization,
+        string projectName,
+        string projectId)
+    {
+        var fields = root.GetProperty("fields");
+        var item = new NormalizedWorkItem
+        {
+            Id = root.GetProperty("id").GetInt32(),
+            ProjectId = projectId,
+            ProjectName = projectName,
+            Organization = organization,
+            Title = GetFieldString(fields, "System.Title") ?? $"Work Item {root.GetProperty("id").GetInt32()}",
+            WorkItemType = GetFieldString(fields, "System.WorkItemType") ?? string.Empty,
+            State = GetFieldString(fields, "System.State") ?? string.Empty,
+            AssignedTo = ReadAssignedTo(fields),
+            Tags = GetFieldString(fields, "System.Tags"),
+            AreaPath = GetFieldString(fields, "System.AreaPath"),
+            IterationPath = GetFieldString(fields, "System.IterationPath"),
+            Url = root.TryGetProperty("url", out var urlElement) ? urlElement.GetString() : null,
+            DescriptionFields = ExtractDescriptionFields(fields),
+            ParentIds = ExtractRelationIds(root, "Parent"),
+            ChildIds = ExtractRelationIds(root, "Child")
+        };
+
+        return item;
+    }
+
+    private static List<DescriptionField> ExtractDescriptionFields(JsonElement fields)
+    {
+        var descriptions = new List<DescriptionField>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var priorityField in DescriptionFieldPriority)
+        {
+            if (TryGetStringField(fields, priorityField, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                descriptions.Add(new DescriptionField
+                {
+                    ReferenceName = priorityField,
+                    DisplayName = DisplayNameForField(priorityField),
+                    Value = value.Trim()
+                });
+                seen.Add(priorityField);
+            }
+        }
+
+        foreach (var property in fields.EnumerateObject())
+        {
+            if (seen.Contains(property.Name))
+            {
+                continue;
+            }
+
+            if (!LooksLikeDescriptionField(property.Name))
+            {
+                continue;
+            }
+
+            if (property.Value.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var value = property.Value.GetString();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            descriptions.Add(new DescriptionField
+            {
+                ReferenceName = property.Name,
+                DisplayName = DisplayNameForField(property.Name),
+                Value = value.Trim()
+            });
+        }
+
+        return descriptions;
+    }
+
+    private static bool LooksLikeDescriptionField(string fieldName)
+    {
+        return fieldName.Contains("description", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("acceptancecriteria", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("reprosteps", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("problem", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("steps", StringComparison.OrdinalIgnoreCase)
+            || fieldName.Contains("criteria", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static List<int> ExtractRelationIds(JsonElement root, string relationName)
+    {
+        var ids = new List<int>();
+        if (!root.TryGetProperty("relations", out var relations) || relations.ValueKind != JsonValueKind.Array)
+        {
+            return ids;
+        }
+
+        foreach (var relation in relations.EnumerateArray())
+        {
+            if (!relation.TryGetProperty("rel", out var relElement))
+            {
+                continue;
+            }
+
+            var rel = relElement.GetString() ?? string.Empty;
+            if (!rel.Contains(relationName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!relation.TryGetProperty("url", out var urlElement))
+            {
+                continue;
+            }
+
+            var relationUrl = urlElement.GetString();
+            if (string.IsNullOrWhiteSpace(relationUrl))
+            {
+                continue;
+            }
+
+            var lastSegment = relationUrl.Split('/').LastOrDefault();
+            if (int.TryParse(lastSegment, out var id))
+            {
+                ids.Add(id);
+            }
+        }
+
+        return ids;
+    }
+
+    private static string? GetFieldString(JsonElement fields, string fieldName)
+    {
+        return TryGetStringField(fields, fieldName, out var value) ? value : null;
+    }
+
+    private static bool TryGetStringField(JsonElement fields, string fieldName, out string? value)
+    {
+        value = null;
+        if (!fields.TryGetProperty(fieldName, out var field))
+        {
+            return false;
+        }
+
+        value = field.ValueKind switch
+        {
+            JsonValueKind.String => field.GetString(),
+            JsonValueKind.Number => field.ToString(),
+            _ => null
+        };
+
+        return value is not null;
+    }
+
+    private static string? ReadAssignedTo(JsonElement fields)
+    {
+        if (!fields.TryGetProperty("System.AssignedTo", out var assignedTo))
+        {
+            return null;
+        }
+
+        return assignedTo.ValueKind switch
+        {
+            JsonValueKind.String => assignedTo.GetString(),
+            JsonValueKind.Object => TryReadIdentity(assignedTo),
+            _ => null
+        };
+    }
+
+    private static string? TryReadIdentity(JsonElement parent, string propertyName)
+    {
+        if (!parent.TryGetProperty(propertyName, out var property))
+        {
+            return null;
+        }
+
+        return TryReadIdentity(property);
+    }
+
+    private static string? TryReadIdentity(JsonElement identityObject)
+    {
+        if (identityObject.ValueKind == JsonValueKind.String)
+        {
+            return identityObject.GetString();
+        }
+
+        if (identityObject.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (identityObject.TryGetProperty("displayName", out var displayName))
+        {
+            return displayName.GetString();
+        }
+
+        if (identityObject.TryGetProperty("name", out var name))
+        {
+            return name.GetString();
+        }
+
+        return null;
+    }
+
+    private static string DisplayNameForField(string referenceName)
+    {
+        var lastSegment = referenceName.Split('.').Last();
+        var builder = new StringBuilder();
+
+        for (var i = 0; i < lastSegment.Length; i++)
+        {
+            var current = lastSegment[i];
+            if (i > 0 && char.IsUpper(current) && !char.IsUpper(lastSegment[i - 1]))
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(current);
+        }
+
+        return builder.ToString();
+    }
+
+    private static string ExtractCommentText(JsonElement commentElement)
+    {
+        if (commentElement.TryGetProperty("renderedText", out var renderedText) &&
+            renderedText.ValueKind == JsonValueKind.String)
+        {
+            return renderedText.GetString() ?? string.Empty;
+        }
+
+        if (commentElement.TryGetProperty("text", out var text) && text.ValueKind == JsonValueKind.String)
+        {
+            return text.GetString() ?? string.Empty;
+        }
+
+        return string.Empty;
+    }
+}

@@ -4,7 +4,7 @@
 **Comment And Reference Expansion**
 
 ## Status
-Draft
+Implemented
 
 ## Overview
 This feature extends the base Azure DevOps retrieval flow to gather comments for every retrieved work item and to discover additional work item references embedded in comment text or work item descriptions.

@@ -4,7 +4,8 @@
 This document captures the current logical data model for the `workitems` console application. The application is file-backed at this stage; SQL is used here as a stable way to describe entities, fields, and relationships before implementation choices are finalized.
 
 ## Storage Direction
-- Primary persistence is expected to be JSON files under a user-scoped config/storage root.
+- Primary persistence is expected to be JSON files under `~/.ADO-WI/`.
+- The primary config file is `~/.ADO-WI/ADO-WI.config`.
 - No relational database is planned for the initial release.
 - The SQL below represents the conceptual model only.
 
@@ -17,7 +18,8 @@ create table app_config (
     output_root_path text not null,
     azure_devops_base_url text null,
     default_organization text null,
-    default_project text null,
+    default_project_id text null,
+    default_project_name text null,
     auth_mode text not null,
     pat_secret_ref text null,
     console_ui_provider text not null,
@@ -46,6 +48,7 @@ create table work_item_snapshot (
     iteration_path text null,
     area_path text null,
     tags text null,
+    description_fields_json text null,
     url text null,
     raw_json text not null,
     retrieved_utc text not null
@@ -77,6 +80,7 @@ create table work_item_reference (
     source_kind text not null,
     source_comment_id text null,
     reference_text text not null,
+    expansion_depth integer not null default 1,
     retrieved_utc text not null
 );
 
@@ -96,6 +100,7 @@ create table markdown_export (
 ### `app_config`
 - Stores the local application configuration.
 - `output_root_path` is the path the user provides and the app persists.
+- `default_project_id` and `default_project_name` are both stored so direct commands and interactive flows can resolve the same project reliably.
 - `console_ui_provider` exists because the current design needs to reconcile “Subtray” versus Spectre.Console.
 
 ### `azure_devops_project`
@@ -103,6 +108,7 @@ create table markdown_export (
 
 ### `work_item_snapshot`
 - Stores normalized metadata plus the raw Azure DevOps payload for traceability.
+- `description_fields_json` preserves multiple description-style fields, such as description, acceptance criteria, and reproduction steps, without flattening them into a single field.
 
 ### `work_item_relation`
 - Stores the parent/child graph captured for a retrieval run.
@@ -119,16 +125,33 @@ create table markdown_export (
 - `source_kind` examples:
   - `description`
   - `comment`
+- `expansion_depth` is expected to remain `1` for v1 because textual reference traversal stops after the first discovered layer.
 
 ### `markdown_export`
 - Tracks generated markdown handoff documents.
 
 ## Expected JSON Equivalents
-- `config.json` or `<appname>.config`
+- `~/.ADO-WI/ADO-WI.config`
 - `projects.json`
 - `workitems/<org>/<project>/<id>.json`
 - `comments/<org>/<project>/<id>.json`
 - `exports/<project>/<id>.md`
+
+## Implemented Config Shape
+```json
+{
+  "storageRootPath": "~/.ADO-WI",
+  "outputRootPath": "/path/to/exports",
+  "azureDevOpsBaseUrl": "https://dev.azure.com",
+  "defaultOrganization": "org-name",
+  "defaultProjectId": "project-guid",
+  "defaultProjectName": "Project Name",
+  "authMode": "pat",
+  "pat": "token",
+  "consoleUiProvider": "Spectre.Console",
+  "lastExportPath": "/path/to/export.md"
+}
+```
 
 ## Pending Model Decisions
 - Whether secret material will be stored directly, referenced indirectly, or delegated to OS keychain storage.
