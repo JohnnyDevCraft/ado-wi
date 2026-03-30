@@ -32,5 +32,7 @@ public sealed class NormalizedWorkItem
 
     public List<int> ChildIds { get; init; } = [];
 
+    public List<int> RelatedIds { get; init; } = [];
+
     public List<WorkItemComment> Comments { get; init; } = [];
 }

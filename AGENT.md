@@ -37,6 +37,7 @@
 - The first Homebrew-packaged version should be `0.1.0`.
 - Packaging work should include formula creation, artifact hash generation, and install verification.
 - Public Homebrew installs must use a GitHub release asset URL rather than a machine-local `file://` path.
+- Version `0.1.1` fixes missing related work item expansion for parent and child items.
 - The application’s core output is a markdown document containing:
   - the selected work item
   - parent work items
@@ -95,7 +96,10 @@
   - direct config file creation in an isolated home directory
   - `brew install johnnydevcraft/ado-wi/ado-wi`
   - `brew test johnnydevcraft/ado-wi/ado-wi`
+- Fixed related work item retrieval for parent and child items by:
+  - loading secondary work items by global Azure DevOps work item ID instead of forcing the configured default project path
+  - fetching comments from each retrieved item's actual project
+  - including formal Azure DevOps `Related` links from the root, parents, and children in the related work item section
 
 ## Next Recommended Step
-- Test the Azure DevOps retrieval flow with live credentials and confirm any project-specific description fields that should be promoted in exports.
-- Decide when to switch the Homebrew formula from the local source tarball URL to a published GitHub release asset URL.
+- Publish and verify the `0.1.1` release and tap update.

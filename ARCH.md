@@ -106,6 +106,8 @@ The final executable name is `ado-wi`.
 - Each retrieved work item should normalize the same core field set.
 - Description content may come from multiple Azure DevOps long-text fields and should be preserved as distinct description-style fields.
 - Parent, child, and text-referenced related items should all carry the same normalized shape into markdown generation.
+- Secondary work item loads should use each work item's actual project metadata rather than assuming the configured default project for all follow-up requests.
+- The related work item section should include both one-layer text references and formal Azure DevOps `Related` relations discovered on the root, parent, and child items.
 
 ## File Storage Direction
 - Config and state under the user-scoped hidden folder `~/.ADO-WI/`
@@ -124,8 +126,8 @@ The final executable name is `ado-wi`.
   - [`/Users/john/Source/repos/xelseor/homebrew-ado-wi`](/Users/john/Source/repos/xelseor/homebrew-ado-wi)
 - Planned formula location:
   - [`/Users/john/Source/repos/xelseor/homebrew-ado-wi/Formula/ado-wi.rb`](/Users/john/Source/repos/xelseor/homebrew-ado-wi/Formula/ado-wi.rb)
-- Planned initial Homebrew-packaged version:
-  - `0.1.0`
+- Current release line:
+  - `0.1.1`
 - Packaging work should include:
   - release artifact generation
   - SHA-256 hash generation for the artifact

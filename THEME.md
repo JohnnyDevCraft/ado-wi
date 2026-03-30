@@ -54,3 +54,4 @@
 - The console UI is implemented with `Spectre.Console`.
 - The splash is a boxed ASCII STARC banner rendered at the top of every execution path.
 - Tables are used for help output and selection prompts drive menu/configuration flows.
+- No visual changes were required for the `0.1.1` retrieval bugfix release.

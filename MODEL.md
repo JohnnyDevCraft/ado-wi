@@ -116,6 +116,7 @@ create table markdown_export (
   - `parent`
   - `child`
   - `related`
+- Formal Azure DevOps `Related` links are now part of the related work item expansion behavior for the exported markdown.
 
 ### `work_item_comment`
 - Stores comments pulled for each retrieved work item.
@@ -125,6 +126,7 @@ create table markdown_export (
 - `source_kind` examples:
   - `description`
   - `comment`
+  - `relation`
 - `expansion_depth` is expected to remain `1` for v1 because textual reference traversal stops after the first discovered layer.
 
 ### `markdown_export`

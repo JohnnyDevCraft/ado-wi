@@ -55,21 +55,19 @@ public sealed class AzureDevOpsClient
     public async Task<NormalizedWorkItem> GetWorkItemAsync(
         string baseUrl,
         string organization,
-        string projectName,
-        string projectId,
         string pat,
         int workItemId,
         CancellationToken cancellationToken = default)
     {
         using var client = CreateClient(baseUrl, pat);
         var url =
-            $"{TrimEnd(baseUrl)}/{Uri.EscapeDataString(organization)}/{Uri.EscapeDataString(projectName)}/_apis/wit/workitems/{workItemId}?$expand=relations&api-version=7.1";
+            $"{TrimEnd(baseUrl)}/{Uri.EscapeDataString(organization)}/_apis/wit/workitems/{workItemId}?$expand=relations&api-version=7.1";
         using var response = await client.GetAsync(url, cancellationToken);
         await EnsureSuccessAsync(response, $"Unable to load work item {workItemId}.");
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        return ParseWorkItem(document.RootElement, organization, projectName, projectId);
+        return ParseWorkItem(document.RootElement, organization);
     }
 
     public async Task<IReadOnlyList<WorkItemComment>> GetCommentsAsync(
@@ -150,11 +148,11 @@ public sealed class AzureDevOpsClient
 
     private static NormalizedWorkItem ParseWorkItem(
         JsonElement root,
-        string organization,
-        string projectName,
-        string projectId)
+        string organization)
     {
         var fields = root.GetProperty("fields");
+        var projectName = GetFieldString(fields, "System.TeamProject") ?? string.Empty;
+        var projectId = GetFieldString(fields, "System.ProjectId") ?? string.Empty;
         var item = new NormalizedWorkItem
         {
             Id = root.GetProperty("id").GetInt32(),
@@ -171,7 +169,8 @@ public sealed class AzureDevOpsClient
             Url = root.TryGetProperty("url", out var urlElement) ? urlElement.GetString() : null,
             DescriptionFields = ExtractDescriptionFields(fields),
             ParentIds = ExtractRelationIds(root, "Parent"),
-            ChildIds = ExtractRelationIds(root, "Child")
+            ChildIds = ExtractRelationIds(root, "Child"),
+            RelatedIds = ExtractRelationIds(root, "Related")
         };
 
         return item;

@@ -14,5 +14,7 @@ public sealed class WorkItemReference
 
     public string ReferenceText { get; init; } = string.Empty;
 
+    public string? RelationshipType { get; init; }
+
     public bool Retrieved { get; set; }
 }

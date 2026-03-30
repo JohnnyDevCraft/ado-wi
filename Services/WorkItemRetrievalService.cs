@@ -30,18 +30,45 @@ public sealed class WorkItemRetrievalService
         var pat = _config.Pat!;
         var baseUrl = _config.AzureDevOpsBaseUrl;
 
-        var root = await _client.GetWorkItemAsync(baseUrl, organization, projectName, projectId, pat, workItemId, cancellationToken);
-        root.Comments.AddRange(await _client.GetCommentsAsync(baseUrl, organization, projectName, pat, root.Id, cancellationToken));
+        var root = await _client.GetWorkItemAsync(baseUrl, organization, pat, workItemId, cancellationToken);
+        root.Comments.AddRange(await _client.GetCommentsAsync(baseUrl, organization, root.ProjectName, pat, root.Id, cancellationToken));
 
-        var parents = await LoadWorkItemsAsync(root.ParentIds, organization, projectName, projectId, pat, baseUrl, notes, cancellationToken);
-        var children = await LoadWorkItemsAsync(root.ChildIds, organization, projectName, projectId, pat, baseUrl, notes, cancellationToken);
+        var parents = await LoadWorkItemsAsync(root.ParentIds, organization, pat, baseUrl, notes, cancellationToken);
+        var children = await LoadWorkItemsAsync(root.ChildIds, organization, pat, baseUrl, notes, cancellationToken);
 
         var referenceSources = new[] { root }.Concat(parents).Concat(children).ToList();
-        var parsedReferences = referenceSources
+        var textualReferences = referenceSources
             .SelectMany(_referenceParser.ParseReferences)
-            .Where(reference => reference.ReferencedWorkItemId != root.Id)
-            .Where(reference => parents.All(parent => parent.Id != reference.ReferencedWorkItemId))
-            .Where(reference => children.All(child => child.Id != reference.ReferencedWorkItemId))
+            .ToList();
+        var relationReferences = referenceSources
+            .SelectMany(source => source.RelatedIds.Select(relatedId => new WorkItemReference
+            {
+                SourceWorkItemId = source.Id,
+                SourceKind = "relation",
+                SourceLabel = "Related Link",
+                ReferencedWorkItemId = relatedId,
+                ReferenceText = $"Related work item {relatedId}",
+                RelationshipType = "Related"
+            }))
+            .ToList();
+
+        var excludedIds = new HashSet<int>([root.Id]);
+        excludedIds.UnionWith(parents.Select(parent => parent.Id));
+        excludedIds.UnionWith(children.Select(child => child.Id));
+
+        var parsedReferences = textualReferences
+            .Concat(relationReferences)
+            .Where(reference => !excludedIds.Contains(reference.ReferencedWorkItemId))
+            .GroupBy(reference => new
+            {
+                reference.SourceWorkItemId,
+                reference.SourceKind,
+                reference.SourceLabel,
+                reference.SourceCommentId,
+                reference.ReferencedWorkItemId,
+                reference.RelationshipType
+            })
+            .Select(group => group.First())
             .ToList();
 
         var related = new List<RelatedWorkItem>();
@@ -52,12 +79,10 @@ public sealed class WorkItemRetrievalService
                 var relatedWorkItem = await _client.GetWorkItemAsync(
                     baseUrl,
                     organization,
-                    projectName,
-                    projectId,
                     pat,
                     referenceGroup.Key,
                     cancellationToken);
-                relatedWorkItem.Comments.AddRange(await _client.GetCommentsAsync(baseUrl, organization, projectName, pat, relatedWorkItem.Id, cancellationToken));
+                relatedWorkItem.Comments.AddRange(await _client.GetCommentsAsync(baseUrl, organization, relatedWorkItem.ProjectName, pat, relatedWorkItem.Id, cancellationToken));
 
                 foreach (var reference in referenceGroup)
                 {
@@ -94,8 +119,6 @@ public sealed class WorkItemRetrievalService
     private async Task<List<NormalizedWorkItem>> LoadWorkItemsAsync(
         IEnumerable<int> ids,
         string organization,
-        string projectName,
-        string projectId,
         string pat,
         string baseUrl,
         List<string> notes,
@@ -106,8 +129,8 @@ public sealed class WorkItemRetrievalService
         {
             try
             {
-                var workItem = await _client.GetWorkItemAsync(baseUrl, organization, projectName, projectId, pat, id, cancellationToken);
-                workItem.Comments.AddRange(await _client.GetCommentsAsync(baseUrl, organization, projectName, pat, workItem.Id, cancellationToken));
+                var workItem = await _client.GetWorkItemAsync(baseUrl, organization, pat, id, cancellationToken);
+                workItem.Comments.AddRange(await _client.GetCommentsAsync(baseUrl, organization, workItem.ProjectName, pat, workItem.Id, cancellationToken));
                 results.Add(workItem);
             }
             catch (Exception ex)

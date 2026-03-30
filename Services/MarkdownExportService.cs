@@ -151,8 +151,14 @@ public sealed class MarkdownExportService
             builder.AppendLine();
             foreach (var reference in references)
             {
+                var sourceKindLabel = reference.SourceKind == "relation"
+                    ? "relation"
+                    : reference.SourceKind;
+                var relationshipDetails = string.IsNullOrWhiteSpace(reference.RelationshipType)
+                    ? string.Empty
+                    : $" ({reference.RelationshipType})";
                 builder.AppendLine(
-                    $"- Found in work item `{reference.SourceWorkItemId}` {reference.SourceKind} `{reference.SourceLabel}` via `{reference.ReferenceText}`");
+                    $"- Found in work item `{reference.SourceWorkItemId}` {sourceKindLabel}{relationshipDetails} `{reference.SourceLabel}` via `{reference.ReferenceText}`");
             }
 
             builder.AppendLine();
