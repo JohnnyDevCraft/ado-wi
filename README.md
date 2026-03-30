@@ -78,7 +78,7 @@ The final executable name will be `ado-wi`.
 ## Current Status
 - Core application baseline is implemented
 - STARC splash, help/version, interactive menu flow, config persistence, retrieval/export pipeline, and Homebrew packaging scripts are in place
-- Version `0.1.2` captures a broader set of description-style fields and converts HTML-rich description fields to Markdown before export generation
+- Version `0.1.4` includes the broader description-field capture and HTML-to-Markdown conversion work, plus the hierarchy relation parsing fix for Azure DevOps parent/child links
 
 ## Repository Structure
 - [`Program.cs`](/Users/john/Source/repos/xelseor/workitems/Program.cs)
@@ -93,9 +93,8 @@ The final executable name will be `ado-wi`.
 - Application source repo: [`/Users/john/Source/repos/xelseor/workitems`](/Users/john/Source/repos/xelseor/workitems)
 - Homebrew tap repo: [`/Users/john/Source/repos/xelseor/homebrew-ado-wi`](/Users/john/Source/repos/xelseor/homebrew-ado-wi)
 - Planned formula path: [`/Users/john/Source/repos/xelseor/homebrew-ado-wi/Formula/ado-wi.rb`](/Users/john/Source/repos/xelseor/homebrew-ado-wi/Formula/ado-wi.rb)
-- Current app version target: `0.1.2`
-- Latest published release line: `0.1.1`
-- Current packaging script will create [`dist/ado-wi-0.1.2.tar.gz`](/Users/john/Source/repos/xelseor/workitems/dist/ado-wi-0.1.2.tar.gz)
+- Current app version target: `0.1.4`
+- Current packaging script will create [`dist/ado-wi-0.1.4.tar.gz`](/Users/john/Source/repos/xelseor/workitems/dist/ado-wi-0.1.4.tar.gz)
 - Homebrew packaging includes the formula artifact hash and an install verification step
 - Packaging helper scripts:
   - [`scripts/publish.sh`](/Users/john/Source/repos/xelseor/workitems/scripts/publish.sh)

@@ -37,8 +37,7 @@
 - The first Homebrew-packaged version should be `0.1.0`.
 - Packaging work should include formula creation, artifact hash generation, and install verification.
 - Public Homebrew installs must use a GitHub release asset URL rather than a machine-local `file://` path.
-- Version `0.1.1` fixes missing related work item expansion for parent and child items.
-- Version `0.1.2` expands description-field capture and converts HTML description content to Markdown before export.
+- Version `0.1.4` carries forward the related-item fixes, broader description-field capture, HTML-to-Markdown conversion, and the hierarchy relation parsing fix for Azure DevOps parent/child link names.
 - The application’s core output is a markdown document containing:
   - the selected work item
   - parent work items
@@ -104,6 +103,7 @@
 - Expanded description-field handling by:
   - capturing a broader set of long-text and rich-text description-style fields
   - converting HTML description content to Markdown before it reaches the export builder
+- Fixed hierarchy relation parsing by matching Azure DevOps `System.LinkTypes.Hierarchy-Reverse` for parents and `System.LinkTypes.Hierarchy-Forward` for children
 
 ## Next Recommended Step
-- Validate the broader description-field capture against live Azure DevOps work items and decide when to publish the `0.1.2` release.
+- Verify Homebrew upgrade behavior against the published `0.1.4` release on the other system.

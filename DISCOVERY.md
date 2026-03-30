@@ -126,8 +126,8 @@ Work item data in Azure DevOps is often not in a form that is immediately useful
 - Formula work must include the artifact SHA-256 and install verification through Homebrew.
 - The current implementation uses `Spectre.Console` for the menu/help/status experience.
 - The current Homebrew formula should be generated from a GitHub release asset URL for cross-machine installs.
-- A `0.1.1` bugfix release is required to ensure related work items discovered from parent and child records are included reliably.
-- A `0.1.2` follow-up release is needed to ensure description-style fields are captured broadly and HTML content is converted to Markdown before export.
+- The current `0.1.4` release line combines the hierarchy retrieval fix with the broader description-field capture and HTML-to-Markdown conversion updates.
+- Parent and child hierarchy traversal depends on Azure DevOps hierarchy relation names rather than literal `Parent` and `Child` substrings.
 
 ## Change Log
 - 2026-03-30: Initial discovery document created from user request and existing repository scaffold.
@@ -141,3 +141,5 @@ Work item data in Azure DevOps is often not in a form that is immediately useful
 - 2026-03-30: Implemented the baseline application, local Homebrew packaging scripts, and verified a local Homebrew install for version `0.1.0`.
 - 2026-03-30: Fixed related work item retrieval for parent and child items and prepared the `0.1.1` release.
 - 2026-03-30: Expanded description-field capture and converted HTML description content to Markdown, then moved the app version to `0.1.2`.
+- 2026-03-30: Corrected hierarchy relation parsing so bug children and parent features are returned from Azure DevOps hierarchy links.
+- 2026-03-30: Moved the combined fix set to version `0.1.4` for release and Homebrew distribution.

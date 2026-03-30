@@ -293,7 +293,7 @@ public sealed class AzureDevOpsClient
             }
 
             var rel = relElement.GetString() ?? string.Empty;
-            if (!rel.Contains(relationName, StringComparison.OrdinalIgnoreCase))
+            if (!MatchesRelation(rel, relationName))
             {
                 continue;
             }
@@ -317,6 +317,19 @@ public sealed class AzureDevOpsClient
         }
 
         return ids;
+    }
+
+    private static bool MatchesRelation(string relationValue, string relationName)
+    {
+        return relationName switch
+        {
+            "Parent" => relationValue.Contains("Hierarchy-Reverse", StringComparison.OrdinalIgnoreCase)
+                        || relationValue.Contains("Parent", StringComparison.OrdinalIgnoreCase),
+            "Child" => relationValue.Contains("Hierarchy-Forward", StringComparison.OrdinalIgnoreCase)
+                       || relationValue.Contains("Child", StringComparison.OrdinalIgnoreCase),
+            "Related" => relationValue.Contains("Related", StringComparison.OrdinalIgnoreCase),
+            _ => relationValue.Contains(relationName, StringComparison.OrdinalIgnoreCase)
+        };
     }
 
     private static string? GetFieldString(JsonElement fields, string fieldName)
