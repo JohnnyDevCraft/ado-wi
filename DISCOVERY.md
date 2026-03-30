@@ -125,7 +125,7 @@ Work item data in Azure DevOps is often not in a form that is immediately useful
 - Homebrew packaging is planned through the separate tap repo and should begin with version `0.1.0`.
 - Formula work must include the artifact SHA-256 and install verification through Homebrew.
 - The current implementation uses `Spectre.Console` for the menu/help/status experience.
-- The current Homebrew formula is generated from a local source tarball and has been verified locally with `brew install` and `brew test`.
+- The current Homebrew formula should be generated from a GitHub release asset URL for cross-machine installs.
 
 ## Change Log
 - 2026-03-30: Initial discovery document created from user request and existing repository scaffold.

@@ -99,6 +99,7 @@ The final executable name will be `ado-wi`.
 - Packaging helper scripts:
   - [`scripts/publish.sh`](/Users/john/Source/repos/xelseor/workitems/scripts/publish.sh)
   - [`scripts/update-homebrew-formula.sh`](/Users/john/Source/repos/xelseor/workitems/scripts/update-homebrew-formula.sh)
+- Public Homebrew installs should use a GitHub release asset URL rather than a machine-local `file://` archive path
 
 ## Planning Docs
 - [`ARCH.md`](/Users/john/Source/repos/xelseor/workitems/ARCH.md)

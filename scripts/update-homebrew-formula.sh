@@ -8,6 +8,8 @@ TAP_DIR="${TAP_DIR:-/Users/john/Source/repos/xelseor/homebrew-ado-wi}"
 FORMULA_DIR="$TAP_DIR/Formula"
 FORMULA_PATH="$FORMULA_DIR/ado-wi.rb"
 ARCHIVE_PATH="${1:-}"
+URL_MODE="${URL_MODE:-release}"
+REPO_SLUG="${REPO_SLUG:-JohnnyDevCraft/ado-wi}"
 
 if [[ -z "$ARCHIVE_PATH" ]]; then
   VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$PROJECT_FILE" | head -n 1)"
@@ -21,7 +23,14 @@ fi
 
 VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$PROJECT_FILE" | head -n 1)"
 SHA256="$(shasum -a 256 "$ARCHIVE_PATH" | awk '{print $1}')"
-ARCHIVE_URL="file://$ARCHIVE_PATH"
+TAG="v$VERSION"
+ASSET_NAME="ado-wi-$VERSION.tar.gz"
+
+if [[ "$URL_MODE" == "local" ]]; then
+  ARCHIVE_URL="file://$ARCHIVE_PATH"
+else
+  ARCHIVE_URL="https://github.com/$REPO_SLUG/releases/download/$TAG/$ASSET_NAME"
+fi
 
 mkdir -p "$FORMULA_DIR"
 
@@ -51,4 +60,6 @@ EOF
 echo "Updated formula: $FORMULA_PATH"
 echo "Version: $VERSION"
 echo "Archive: $ARCHIVE_PATH"
+echo "URL mode: $URL_MODE"
+echo "URL: $ARCHIVE_URL"
 echo "SHA256: $SHA256"

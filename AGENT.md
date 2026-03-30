@@ -36,7 +36,7 @@
 - The distribution plan should include Homebrew packaging through the separate tap repository.
 - The first Homebrew-packaged version should be `0.1.0`.
 - Packaging work should include formula creation, artifact hash generation, and install verification.
-- The current Homebrew formula targets a locally generated source tarball for version `0.1.0` and has been install-tested locally.
+- Public Homebrew installs must use a GitHub release asset URL rather than a machine-local `file://` path.
 - The application’s core output is a markdown document containing:
   - the selected work item
   - parent work items

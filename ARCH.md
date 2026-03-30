@@ -131,6 +131,8 @@ The final executable name is `ado-wi`.
   - SHA-256 hash generation for the artifact
   - formula creation/update
   - Homebrew install verification
+- The default formula URL strategy should use a GitHub release asset for public installs.
+- Local `file://` formula URLs are acceptable only for machine-local validation.
 - Current local packaging scripts:
   - [`/Users/john/Source/repos/xelseor/workitems/scripts/publish.sh`](/Users/john/Source/repos/xelseor/workitems/scripts/publish.sh)
   - [`/Users/john/Source/repos/xelseor/workitems/scripts/update-homebrew-formula.sh`](/Users/john/Source/repos/xelseor/workitems/scripts/update-homebrew-formula.sh)

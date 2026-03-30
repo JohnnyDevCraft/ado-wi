@@ -53,6 +53,7 @@ This feature packages the `ado-wi` application for Homebrew distribution so the 
 - Formula should install the executable exposed as `ado-wi`
 - Formula should reference version `0.1.0`
 - Formula should include the correct `sha256` value for the packaged artifact
+- Formula should point to a publicly reachable release artifact for cross-machine installs
 - Formula should include the metadata Homebrew requires for installability
 - Formula should support a successful `brew install` flow from the project tap
 
